@@ -1098,7 +1098,7 @@ async def txt_handler(bot: Client, m: Message):
 
             elif "classplusapp" in url:
                 signed_api = f"https://cpatbots-updatee.onrender.com/extract_keys?url={url}@bots_updatee&user_id={7290128282}"
-                response = requests.get(signed_api, timeout=20)
+                response = requests.get(signed_api, timeout=60)
                 #url = response.text.strip()
                 url = response.json()['url']  
                     
