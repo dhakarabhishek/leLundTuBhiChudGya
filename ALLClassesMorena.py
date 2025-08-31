@@ -293,27 +293,37 @@ async def download_and_decrypt_video(url, cmd, name, key):
             return None  
 
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
+    # पहले thumbnail generate
     subprocess.run(f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{filename}.jpg"', shell=True)
-    await prog.delete (True)
+    await prog.delete(True)
     reply1 = await bot.send_message(channel_id, f"**📩 Uploading Video 📩:-**\n<blockquote>**{name}**</blockquote>")
     reply = await m.reply_text(f"**Generate Thumbnail:**\n<blockquote>**{name}**</blockquote>")
+
     try:
         if thumb == "/d":
             thumbnail = f"{filename}.jpg"
         else:
             thumbnail = thumb
-            
     except Exception as e:
         await m.reply_text(str(e))
-      
-    dur = int(duration(filename))
+
+    # 🔹 य
+    watermarked_file = f"{filename}_wm.mp4"
+    wm_cmd = f'ffmpeg -i "{filename}" -vf "drawtext=text=\'All Classes Morena\':fontcolor=navy@0.3:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2" -codec:a copy "{watermarked_file}" -y'
+    subprocess.run(wm_cmd, shell=True)
+
+    dur = int(duration(watermarked_file))
     start_time = time.time()
 
     try:
-        await bot.send_video(channel_id, filename, caption=cc, supports_streaming=True, height=720, width=1280, thumb=thumbnail, duration=dur, progress=progress_bar, progress_args=(reply, start_time))
+        await bot.send_video(channel_id, watermarked_file, caption=cc, supports_streaming=True, height=720, width=1280, thumb=thumbnail, duration=dur, progress=progress_bar, progress_args=(reply, start_time))
     except Exception:
-        await bot.send_document(channel_id, filename, caption=cc, progress=progress_bar, progress_args=(reply, start_time))
-    os.remove(filename)
+        await bot.send_document(channel_id, watermarked_file, caption=cc, progress=progress_bar, progress_args=(reply, start_time))
+
+    # साफ़ सफाई
+    os.remove(filename)  # original delete
+    os.remove(watermarked_file)  # watermarked भी delete कर सकते हो अगर रखना नहीं है
     await reply.delete(True)
     await reply1.delete(True)
     os.remove(f"{filename}.jpg")
+    
