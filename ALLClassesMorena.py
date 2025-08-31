@@ -301,7 +301,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
         f'-vf "drawtext=text=\'All Classes Morena\':fontfile={font_path}:'
-        f'fontcolor=#8B0000:fontsize=80:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'fontcolor=#8B0000:fontsize=90:x=(w-text_w)/2:y=(h-text_h)/2" '
         f'"{thumbnail_wm}"'
         
     )
