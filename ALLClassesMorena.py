@@ -292,25 +292,28 @@ async def download_and_decrypt_video(url, cmd, name, key):
             print(f"Failed to decrypt {video_path}.")  
             return None  
 
-
-    
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-
     font_path = os.path.join(os.getcwd(), "vidwater.ttf")
 
-    # पहले thumbnail निकाल लो
+    # thumbnail निकालो
     subprocess.run(f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{filename}.jpg"', shell=True)
 
-    # ✅ Wa
+    # temp output file
+    temp_file = f"{filename}_temp.mp4"
+
+    # ✅ पहले temp पर watermark लगाओ
     cmd = (
         f'ffmpeg -i "{filename}" '
         f'-vf "drawtext=text=\'All Classes Morena\':fontfile={font_path}:'
         f'fontcolor=navy@0.3:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2" '
-        f'-codec:a copy -y "{filename}"'
+        f'-codec:a copy -y "{temp_file}"'
     )
     subprocess.run(cmd, shell=True)
 
-    # progress message हटाओ
+    # पुरानी file हटाओ और temp को original नाम पर ले आओ
+    os.remove(filename)
+    os.rename(temp_file, filename)
+
     await prog.delete(True)
 
     reply1 = await bot.send_message(
@@ -322,10 +325,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     )
 
     try:
-        if thumb == "/d":
-            thumbnail = f"{filename}.jpg"
-        else:
-            thumbnail = thumb
+        thumbnail = f"{filename}.jpg" if thumb == "/d" else thumb
     except Exception as e:
         await m.reply_text(str(e))
         thumbnail = f"{filename}.jpg"
@@ -361,3 +361,4 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     await reply1.delete(True)
     os.remove(f"{filename}.jpg")
     
+
