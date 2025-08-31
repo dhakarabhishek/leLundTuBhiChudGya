@@ -292,28 +292,21 @@ async def download_and_decrypt_video(url, cmd, name, key):
             print(f"Failed to decrypt {video_path}.")  
             return None  
 
+
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     font_path = os.path.join(os.getcwd(), "vidwater.ttf")
+    thumbnail_wm = f"{filename}_thumb.jpg"
 
-    # thumbnail निकालो
-    subprocess.run(f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{filename}.jpg"', shell=True)
-
-    # temp output file
-    temp_file = f"{filename}_temp.mp4"
-
-    # ✅ पहले temp पर watermark लगाओ
+    # 1️⃣ Th
     cmd = (
-        f'ffmpeg -i "{filename}" '
+        f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
         f'-vf "drawtext=text=\'All Classes Morena\':fontfile={font_path}:'
-        f'fontcolor=navy@0.3:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2" '
-        f'-codec:a copy -y "{temp_file}"'
+        f'fontcolor=navy@0.3:fontsize=128:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'"{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True)
 
-    # पुरानी file हटाओ और temp को original नाम पर ले आओ
-    os.remove(filename)
-    os.rename(temp_file, filename)
-
+    # 2️⃣ Progress message delete
     await prog.delete(True)
 
     reply1 = await bot.send_message(
@@ -324,15 +317,23 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         f"**Generate Thumbnail:**\n<blockquote>**{name}**</blockquote>"
     )
 
-    try:
-        thumbnail = f"{filename}.jpg" if thumb == "/d" else thumb
-    except Exception as e:
-        await m.reply_text(str(e))
-        thumbnail = f"{filename}.jpg"
+    # 3️⃣ Thumbnail चुनो
+    thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
 
+    # 4️⃣ Video duration निकालो
+    def duration(file_path):
+        result = subprocess.run(
+            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+             '-of', 'default=noprint_wrappers=1:nokey=1', file_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        return float(result.stdout)
+    
     dur = int(duration(filename))
     start_time = time.time()
 
+    # 5️⃣ Video upload
     try:
         await bot.send_video(
             channel_id,
@@ -341,7 +342,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
             supports_streaming=True,
             height=720,
             width=1280,
-            thumb=thumbnail,
+            thumb=thumbnail_final,
             duration=dur,
             progress=progress_bar,
             progress_args=(reply, start_time),
@@ -355,10 +356,8 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
             progress_args=(reply, start_time),
         )
 
-    # साफ-सफाई
-    os.remove(filename)
+    # 6️⃣ Cleanup
     await reply.delete(True)
     await reply1.delete(True)
-    os.remove(f"{filename}.jpg")
-    
-
+    if os.path.exists(thumbnail_wm):
+        os.remove(thumbnail_wm)
