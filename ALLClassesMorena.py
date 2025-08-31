@@ -291,17 +291,17 @@ async def download_and_decrypt_video(url, cmd, name, key):
         else:  
             print(f"Failed to decrypt {video_path}.")  
             return None  
-            
-async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-    font_path = os.path.join(os.getcwd(), "vidwater.ttf")  # आपका font path
-    thumbnail_wm = f"{filename}_thumb.jpg"
-    custom_text = "𝝜𝝭𝗗𝝘𝝙"  # Fancy text watermark
 
-    # 1️⃣ T
+
+async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
+    font_path = os.path.join(os.getcwd(), "vidwater.ttf")
+    thumbnail_wm = f"{filename}_thumb.jpg"
+    
+    # 1️⃣ Th
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
-        f'-vf "drawtext=text=\'{custom_text}\':fontfile={font_path}:'
-        f'fontcolor=red:fontsize=50:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'-vf "drawtext=text=\'HYDRA\':fontfile={font_path}:'
+        f'fontcolor=navy@0.3:fontsize=50:x=(w-text_w)/2:y=(h-text_h)/2" '
         f'"{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True)
@@ -317,7 +317,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         f"**Generate Thumbnail:**\n<blockquote>**{name}**</blockquote>"
     )
 
-    # 3️⃣ Thumbnail choose
+    # 3️⃣ Thumbnail चुनो
     thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
 
     # 4️⃣ Video duration निकालो
@@ -361,4 +361,4 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     await reply1.delete(True)
     if os.path.exists(thumbnail_wm):
         os.remove(thumbnail_wm)
-    
+        
