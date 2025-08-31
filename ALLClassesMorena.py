@@ -300,8 +300,8 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     # 1️⃣ Th
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
-        f'-vf "drawtext=text=\'HYDRA\':fontfile={font_path}:'
-        f'fontcolor=#8B0000:fontsize=150:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'-vf "drawtext=text=\'All Classes Morena\':fontfile={font_path}:'
+        f'fontcolor=#8B0000:fontsize=80:x=(w-text_w)/2:y=(h-text_h)/2" '
         f'"{thumbnail_wm}"'
         
     )
@@ -318,10 +318,10 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         f"**Generate Thumbnail:**\n<blockquote>**{name}**</blockquote>"
     )
 
-    # 3️⃣ Thumbnail चुनो
+    # 3️⃣ 
     thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
 
-    # 4️⃣ Video duration निकालो
+    # 4️⃣ Vid
     def duration(file_path):
         result = subprocess.run(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
