@@ -318,7 +318,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     width, height = map(int, result.stdout.strip().split("x"))
 
     # --- 2️⃣ Calculate proportional font size (10% of video height) ---
-    fontsize = max(int(height * 0.1), 20)  # Minimum 20px
+    fontsize = max(int(height * 0.5), 20)  # Minimum 20px
 
     # --- 3️⃣ Generate thumbnail with centered, proportional watermark ---
     cmd = (
