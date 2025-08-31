@@ -292,12 +292,34 @@ async def download_and_decrypt_video(url, cmd, name, key):
             print(f"Failed to decrypt {video_path}.")  
             return None  
 
+
+    
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-    # पहले thumbnail generate
+
+    font_path = os.path.join(os.getcwd(), "vidwater.ttf")
+
+    # पहले thumbnail निकाल लो
     subprocess.run(f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{filename}.jpg"', shell=True)
+
+    # ✅ Wa
+    cmd = (
+        f'ffmpeg -i "{filename}" '
+        f'-vf "drawtext=text=\'All Classes Morena\':fontfile={font_path}:'
+        f'fontcolor=navy@0.3:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'-codec:a copy -y "{filename}"'
+    )
+    subprocess.run(cmd, shell=True)
+
+    # progress message हटाओ
     await prog.delete(True)
-    reply1 = await bot.send_message(channel_id, f"**📩 Uploading Video 📩:-**\n<blockquote>**{name}**</blockquote>")
-    reply = await m.reply_text(f"**Generate Thumbnail:**\n<blockquote>**{name}**</blockquote>")
+
+    reply1 = await bot.send_message(
+        channel_id,
+        f"**📩 Uploading Video 📩:-**\n<blockquote>**{name}**</blockquote>"
+    )
+    reply = await m.reply_text(
+        f"**Generate Thumbnail:**\n<blockquote>**{name}**</blockquote>"
+    )
 
     try:
         if thumb == "/d":
@@ -306,23 +328,35 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
             thumbnail = thumb
     except Exception as e:
         await m.reply_text(str(e))
+        thumbnail = f"{filename}.jpg"
 
-    # 🔹 य
-    watermarked_file = f"{filename}_wm.mp4"
-    wm_cmd = f'ffmpeg -i "{filename}" -vf "drawtext=text=\'All Classes Morena\':fontcolor=navy@0.3:fontsize=48:x=(w-text_w)/2:y=(h-text_h)/2" -codec:a copy "{watermarked_file}" -y'
-    subprocess.run(wm_cmd, shell=True)
-
-    dur = int(duration(watermarked_file))
+    dur = int(duration(filename))
     start_time = time.time()
 
     try:
-        await bot.send_video(channel_id, watermarked_file, caption=cc, supports_streaming=True, height=720, width=1280, thumb=thumbnail, duration=dur, progress=progress_bar, progress_args=(reply, start_time))
+        await bot.send_video(
+            channel_id,
+            filename,
+            caption=cc,
+            supports_streaming=True,
+            height=720,
+            width=1280,
+            thumb=thumbnail,
+            duration=dur,
+            progress=progress_bar,
+            progress_args=(reply, start_time),
+        )
     except Exception:
-        await bot.send_document(channel_id, watermarked_file, caption=cc, progress=progress_bar, progress_args=(reply, start_time))
+        await bot.send_document(
+            channel_id,
+            filename,
+            caption=cc,
+            progress=progress_bar,
+            progress_args=(reply, start_time),
+        )
 
-    # साफ़ सफाई
-    os.remove(filename)  # original delete
-    os.remove(watermarked_file)  # watermarked भी delete कर सकते हो अगर रखना नहीं है
+    # साफ-सफाई
+    os.remove(filename)
     await reply.delete(True)
     await reply1.delete(True)
     os.remove(f"{filename}.jpg")
