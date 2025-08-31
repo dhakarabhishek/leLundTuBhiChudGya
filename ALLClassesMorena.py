@@ -291,10 +291,13 @@ async def download_and_decrypt_video(url, cmd, name, key):
         else:  
             print(f"Failed to decrypt {video_path}.")  
             return None
-            
-async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-    # Repo-friendly relative font path
-    font_path = os.path.join(os.getcwd(), "fonts", "vidwater.ttf")
+        
+        async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
+    # Font path directly from root folder (same folder as script)
+    font_path = os.path.join(os.getcwd(), "vidwater.ttf")
+    if not os.path.exists(font_path):
+        raise FileNotFoundError(f"Font file not found: {font_path}")
+
     thumbnail_wm = f"{filename}_thumb.jpg"
 
     # --- 1️⃣ Get video resolution using ffprobe ---
@@ -377,8 +380,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     # --- 8️⃣ Cleanup ---
     await reply.delete(True)
     await reply1.delete(True)
+
     if os.path.exists(thumbnail_wm):
         os.remove(thumbnail_wm)
-            
-
-
+        
