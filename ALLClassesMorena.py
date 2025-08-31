@@ -290,24 +290,41 @@ async def download_and_decrypt_video(url, cmd, name, key):
             return video_path  
         else:  
             print(f"Failed to decrypt {video_path}.")  
-            return None  
-
-
+            return None
+            
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-    font_path = os.path.join(os.getcwd(), "vidwater.ttf")
+    # Repo-friendly relative font path
+    font_path = os.path.join(os.getcwd(), "fonts", "vidwater.ttf")
     thumbnail_wm = f"{filename}_thumb.jpg"
+
+    # --- 1️⃣ Get video resolution using ffprobe ---
+    ffprobe_cmd = [
+        "ffprobe",
+        "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=width,height",
+        "-of", "csv=p=0:s=x",
+        filename
+    ]
+    result = subprocess.run(ffprobe_cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"ffprobe failed: {result.stderr}")
     
-    # 1️⃣ Th
+    width, height = map(int, result.stdout.strip().split("x"))
+
+    # --- 2️⃣ Calculate proportional font size (10% of video height) ---
+    fontsize = max(int(height * 0.1), 20)  # Minimum 20px
+
+    # --- 3️⃣ Generate thumbnail with centered, proportional watermark ---
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
-        f'-vf "drawtext=text=\'All Classes Morena\':fontfile={font_path}:'
-        f'fontcolor=#8B0000:fontsize=90:x=(w-text_w)/2:y=(h-text_h)/2" '
-        f'"{thumbnail_wm}"'
-        
+        f'-vf "drawtext=text=\'All Classes Morena\':fontfile=\'{font_path}\':'
+        f'fontcolor=#8B0000:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'-y "{thumbnail_wm}"'
     )
-    subprocess.run(cmd, shell=True)
+    subprocess.run(cmd, shell=True, check=True)
 
-    # 2️⃣ Progress message delete
+    # --- 4️⃣ Delete progress message ---
     await prog.delete(True)
 
     reply1 = await bot.send_message(
@@ -318,10 +335,10 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         f"**Generate Thumbnail:**\n<blockquote>**{name}**</blockquote>"
     )
 
-    # 3️⃣ 
+    # --- 5️⃣ Thumbnail selection ---
     thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
 
-    # 4️⃣ Vid
+    # --- 6️⃣ Video duration function ---
     def duration(file_path):
         result = subprocess.run(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
@@ -334,7 +351,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     dur = int(duration(filename))
     start_time = time.time()
 
-    # 5️⃣ Video upload
+    # --- 7️⃣ Upload video ---
     try:
         await bot.send_video(
             channel_id,
@@ -357,9 +374,11 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
             progress_args=(reply, start_time),
         )
 
-    # 6️⃣ Cleanup
+    # --- 8️⃣ Cleanup ---
     await reply.delete(True)
     await reply1.delete(True)
     if os.path.exists(thumbnail_wm):
         os.remove(thumbnail_wm)
-        
+            
+
+
