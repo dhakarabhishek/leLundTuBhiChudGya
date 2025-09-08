@@ -334,14 +334,19 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
 
     reply1 = await bot.send_message(
         channel_id,
-        f"**📩 Uploading Video 📩:-**\n<blockquote>**{name}**</blockquote>"
+        f"📩 Uploading Video 📩:-\n<blockquote>{name}</blockquote>"
     )
     reply = await m.reply_text(
-        f"**Generate Thumbnail:**\n<blockquote>**{name}**</blockquote>"
+        f"Generate Thumbnail:\n<blockquote>{name}</blockquote>"
     )
 
-    # --- 5️⃣ Thumbnail selection ---
-    thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
+    # --- 5️⃣ Thumbnail selection (safe handling) ---
+    if thumb == "/d":
+        thumbnail_final = thumbnail_wm
+    elif thumb and os.path.exists(thumb):
+        thumbnail_final = thumb
+    else:
+        thumbnail_final = None  # Telegram will auto-generate thumbnail
 
     # --- 6️⃣ Video duration function ---
     def duration(file_path):
@@ -385,6 +390,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
 
     if os.path.exists(thumbnail_wm):
         os.remove(thumbnail_wm)
+        
     
 
         
