@@ -295,15 +295,6 @@ async def download_and_decrypt_video(url, cmd, name, key):
         
 
 
-import os
-import subprocess
-import time
-from PIL import Image, ImageDraw, ImageFont
-from pyrogram import Client
-from pyrogram.types import Message
-
-# assume progress_bar is already defined somewhere in your project
-
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     # --- Paths ---
     font_path = os.path.join(os.getcwd(), "morena.ttf")
