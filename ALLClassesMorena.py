@@ -293,37 +293,56 @@ async def download_and_decrypt_video(url, cmd, name, key):
             return None
         
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-    # --- Font path from root folder ---
+    # --- Paths ---
     font_path = os.path.join(os.getcwd(), "morena.ttf")
+    brush_path = os.path.join(os.getcwd(), "brush.png")
+
     if not os.path.exists(font_path):
         raise FileNotFoundError(f"Font file not found: {font_path}")
+    if not os.path.exists(brush_path):
+        raise FileNotFoundError(f"Brush PNG not found: {brush_path}")
 
     thumbnail_wm = f"{filename}_thumb.jpg"
+    base_thumb = f"{filename}_base.jpg"
 
     # --- 1️⃣ Get video resolution using ffprobe ---
     ffprobe_cmd = [
-        "ffprobe",
-        "-v", "error",
+        "ffprobe", "-v", "error",
         "-select_streams", "v:0",
         "-show_entries", "stream=width,height",
-        "-of", "csv=p=0:s=x",
-        filename
+        "-of", "csv=p=0:s=x", filename
     ]
     result = subprocess.run(ffprobe_cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe failed: {result.stderr}")
-    
+
     width, height = map(int, result.stdout.strip().split("x"))
 
-    # --- 2️⃣ Calculate proportional font size (20% of video height, min 20px) ---
-    fontsize = max(int(height * 0.2), 20)
+    # --- 2️⃣ Calculate proportional font size ---
+    fontsize = max(int(height * 0.08), 20)   # 8% of height
 
-    # --- 3️⃣ Generate thumbnail with centered watermark + blurred black box ---
-    cmd = (
-        f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
+    # --- 3️⃣ Generate thumbnail with brush overlay + black text ---
+    # Extract base frame (10s)
+    subprocess.run(
+        f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 -y "{base_thumb}"',
+        shell=True, check=True
+    )
+
+    # Create text image (transparent background + black text)
+    subprocess.run(
+        f'ffmpeg -f lavfi -i color=color=black@0.0:size={width}x{height} '
         f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
-        f'fontcolor=white:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2:'
-        f'box=1:boxcolor=black@0.5:boxborderw=20" '
+        f'fontcolor=black:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'-t 1 -y text.png',
+        shell=True, check=True
+    )
+
+    # Overlay brush (scaled) + text
+    cmd = (
+        f'ffmpeg -i "{base_thumb}" -i "{brush_path}" -i text.png '
+        f'-filter_complex "[1]scale={width}*0.5:-1[brush];'
+        f'[0][brush]overlay=(W-w)/2:(H-h)/2[tmp];'
+        f'[tmp][2]overlay=(W-w)/2:(H-h)/2" '
         f'-y "{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True, check=True)
@@ -347,11 +366,10 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         result = subprocess.run(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
              '-of', 'default=noprint_wrappers=1:nokey=1', file_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
         return float(result.stdout)
-    
+
     dur = int(duration(filename))
     start_time = time.time()
 
@@ -382,8 +400,10 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     await reply.delete(True)
     await reply1.delete(True)
 
-    if os.path.exists(thumbnail_wm):
-        os.remove(thumbnail_wm)
+    for f in [thumbnail_wm, base_thumb, "text.png"]:
+        if os.path.exists(f):
+            os.remove(f)
+            
         
 
         
