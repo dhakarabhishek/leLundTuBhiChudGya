@@ -330,7 +330,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     # --- 3️⃣ Determine brush size & proportional font ---
     brush_img = Image.open(brush_path)
     brush_width, brush_height = brush_img.size
-    fontsize = max(int(brush_height * 0.50), 20)  # text = 25% of brush height
+    fontsize = max(int(brush_height * 0.10), 20)  # text = 25% of brush height
 
     # --- 4️⃣ Create text PNG with transparent background ---
     subprocess.run(
@@ -344,7 +344,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     # --- 5️⃣ Overlay brush + text on base frame ---
     cmd = (
         f'ffmpeg -i "{base_thumb}" -i "{brush_path}" -i "{text_img}" '
-        f'-filter_complex "[1]scale={width}*0.7:-1[brush];'
+        f'-filter_complex "[1]scale={width}*0.9:-1[brush];'
         f'[0][brush]overlay=(W-w)/2:(H-h)/2[tmp];'
         f'[tmp][2]overlay=(W-w)/2:(H-h)/2" '
         f'-y "{thumbnail_wm}"'
