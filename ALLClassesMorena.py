@@ -11,7 +11,6 @@ import requests
 import tgcrypto
 import subprocess
 import concurrent.futures
-from PIL import Image, ImageDraw, ImageFont
 from math import ceil
 from utils import progress_bar
 from pyrogram import Client, filters
@@ -294,79 +293,42 @@ async def download_and_decrypt_video(url, cmd, name, key):
             return None
         
 
-
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-    # --- Paths ---
+    # --- Font path from root folder ---
     font_path = os.path.join(os.getcwd(), "morena.ttf")
-    brush_path = os.path.join(os.getcwd(), "brush.png")
-
     if not os.path.exists(font_path):
         raise FileNotFoundError(f"Font file not found: {font_path}")
-    if not os.path.exists(brush_path):
-        raise FileNotFoundError(f"Brush PNG not found: {brush_path}")
 
     thumbnail_wm = f"{filename}_thumb.jpg"
-    base_thumb = f"{filename}_base.jpg"
-    text_img_path = "text.png"
 
-    # --- 1️⃣ Get video resolution ---
+    # --- 1️⃣ Get video resolution using ffprobe ---
     ffprobe_cmd = [
-        "ffprobe", "-v", "error",
+        "ffprobe",
+        "-v", "error",
         "-select_streams", "v:0",
         "-show_entries", "stream=width,height",
-        "-of", "csv=p=0:s=x", filename
+        "-of", "csv=p=0:s=x",
+        filename
     ]
     result = subprocess.run(ffprobe_cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe failed: {result.stderr}")
-
+    
     width, height = map(int, result.stdout.strip().split("x"))
 
-    # --- 2️⃣ Extract base frame at 10s ---
-    subprocess.run(
-        f'ffmpeg -ss 00:00:10 -i "{filename}" -vframes 1 -y "{base_thumb}"',
-        shell=True, check=True
-    )
+    # --- 2️⃣ Calculate proportional font size (10% of video height) ---
+    fontsize = max(int(height * 0.2), 20)  # Minimum 20px
 
-    # --- 3️⃣ Determine brush size ---
-    brush_img = Image.open(brush_path)
-    brush_w, brush_h = brush_img.size
-
-    # --- 4️⃣ Create text PNG with Pillow (fit inside brush) ---
-    text = "@Final_Piece"
-    font_size = brush_h  # start with brush height
-    font = ImageFont.truetype(font_path, font_size)
-    draw = ImageDraw.Draw(brush_img)
-
-    while True:
-        text_w, text_h = draw.textsize(text, font=font)
-        if text_w <= brush_w * 0.9:  # fit within 90% of brush width
-            break
-        font_size -= 2
-        font = ImageFont.truetype(font_path, font_size)
-
-    # Transparent canvas same size as brush
-    text_img = Image.new("RGBA", (brush_w, brush_h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(text_img)
-
-    # Center text
-    x = (brush_w - text_w) // 2
-    y = (brush_h - text_h) // 2
-    draw.text((x, y), text, font=font, fill="black")
-
-    text_img.save(text_img_path)
-
-    # --- 5️⃣ Overlay brush + text on base frame ---
+    # --- 3️⃣ Generate thumbnail with centered, proportional watermark ---
     cmd = (
-        f'ffmpeg -i "{base_thumb}" -i "{brush_path}" -i "{text_img_path}" '
-        f'-filter_complex "[1]scale={width}*0.9:-1[brush];'
-        f'[0][brush]overlay=(W-w)/2:(H-h)/2[tmp];'
-        f'[tmp][2]overlay=(W-w)/2:(H-h)/2" '
+        f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
+        f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
+        f'fontcolor=#00008B:fontsize={fontsize}:x=(w-text_w)/2-30:y=(h-text_h)/2+15" '
         f'-y "{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True, check=True)
 
-    # --- 6️⃣ Delete progress message ---
+    # --- 4️⃣ Delete progress message ---
     await prog.delete(True)
 
     reply1 = await bot.send_message(
@@ -377,22 +339,23 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         f"Generate Thumbnail:\n<blockquote>{name}</blockquote>"
     )
 
-    # --- 7️⃣ Select final thumbnail ---
+    # --- 5️⃣ Thumbnail selection ---
     thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
 
-    # --- 8️⃣ Video duration ---
+    # --- 6️⃣ Video duration function ---
     def duration(file_path):
         result = subprocess.run(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
              '-of', 'default=noprint_wrappers=1:nokey=1', file_path],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
         )
         return float(result.stdout)
-
+    
     dur = int(duration(filename))
     start_time = time.time()
 
-    # --- 9️⃣ Upload video ---
+    # --- 7️⃣ Upload video ---
     try:
         await bot.send_video(
             channel_id,
@@ -415,13 +378,13 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
             progress_args=(reply, start_time),
         )
 
-    # --- 🔟 Cleanup ---
+    # --- 8️⃣ Cleanup ---
     await reply.delete(True)
     await reply1.delete(True)
 
-    for f in [thumbnail_wm, base_thumb, text_img_path]:
-        if os.path.exists(f):
-            os.remove(f)    
+    if os.path.exists(thumbnail_wm):
+        os.remove(thumbnail_wm)
+
         
             
         
