@@ -296,7 +296,7 @@ async def download_and_decrypt_video(url, cmd, name, key):
 
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     # --- Font path from root folder ---
-    font_path = os.path.join(os.getcwd(), "vidwater.ttf")
+    font_path = os.path.join(os.getcwd(), "morena.ttf")
     if not os.path.exists(font_path):
         raise FileNotFoundError(f"Font file not found: {font_path}")
 
@@ -323,7 +323,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     # --- 3️⃣ Generate thumbnail with centered, proportional watermark ---
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
-        f'-vf "drawtext=text=\'All Classes Morena\':fontfile=\'{font_path}\':'
+        f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
         f'fontcolor=#8B0000:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2" '
         f'-y "{thumbnail_wm}"'
     )
