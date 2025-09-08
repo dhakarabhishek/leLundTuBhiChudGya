@@ -293,7 +293,6 @@ async def download_and_decrypt_video(url, cmd, name, key):
             return None
         
         
-
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     # --- Font path from root folder ---
     font_path = os.path.join(os.getcwd(), "morena.ttf")
@@ -317,14 +316,15 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     
     width, height = map(int, result.stdout.strip().split("x"))
 
-    # --- 2️⃣ Calculate proportional font size (10% of video height) ---
+    # --- 2️⃣ Calculate proportional font size (20% of video height) ---
     fontsize = max(int(height * 0.2), 20)  # Minimum 20px
 
-    # --- 3️⃣ Generate thumbnail with centered, proportional watermark ---
+    # --- 3️⃣ Generate thumbnail with centered, proportional watermark + shadow ---
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
         f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
-        f'fontcolor=#8B0000:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'fontcolor=white:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2:'
+        f'shadowcolor=black:shadowx=2:shadowy=2" '
         f'-y "{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True, check=True)
@@ -385,5 +385,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
 
     if os.path.exists(thumbnail_wm):
         os.remove(thumbnail_wm)
+    
+
         
     
