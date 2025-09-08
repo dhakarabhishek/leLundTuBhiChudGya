@@ -11,7 +11,7 @@ import requests
 import tgcrypto
 import subprocess
 import concurrent.futures
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from math import ceil
 from utils import progress_bar
 from pyrogram import Client, filters
@@ -294,6 +294,16 @@ async def download_and_decrypt_video(url, cmd, name, key):
             return None
         
 
+
+import os
+import subprocess
+import time
+from PIL import Image, ImageDraw, ImageFont
+from pyrogram import Client
+from pyrogram.types import Message
+
+# assume progress_bar is already defined somewhere in your project
+
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     # --- Paths ---
     font_path = os.path.join(os.getcwd(), "morena.ttf")
@@ -306,7 +316,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
 
     thumbnail_wm = f"{filename}_thumb.jpg"
     base_thumb = f"{filename}_base.jpg"
-    text_img = "text.png"
+    text_img_path = "text.png"
 
     # --- 1️⃣ Get video resolution ---
     ffprobe_cmd = [
@@ -327,23 +337,37 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         shell=True, check=True
     )
 
-    # --- 3️⃣ Determine brush size & proportional font ---
+    # --- 3️⃣ Determine brush size ---
     brush_img = Image.open(brush_path)
-    brush_width, brush_height = brush_img.size
-    fontsize = max(int(brush_height * 0.12), 20)  # text = 25% of brush height
+    brush_w, brush_h = brush_img.size
 
-    # --- 4️⃣ Create text PNG with transparent background ---
-    subprocess.run(
-        f'ffmpeg -f lavfi -i color=color=black@0.0:size={width}x{height}:d=1,format=rgba '
-        f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
-        f'fontcolor=black:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2-10" '
-        f'-frames:v 1 -y "{text_img}"',
-        shell=True, check=True
-    )
+    # --- 4️⃣ Create text PNG with Pillow (fit inside brush) ---
+    text = "@Final_Piece"
+    font_size = brush_h  # start with brush height
+    font = ImageFont.truetype(font_path, font_size)
+    draw = ImageDraw.Draw(brush_img)
+
+    while True:
+        text_w, text_h = draw.textsize(text, font=font)
+        if text_w <= brush_w * 0.9:  # fit within 90% of brush width
+            break
+        font_size -= 2
+        font = ImageFont.truetype(font_path, font_size)
+
+    # Transparent canvas same size as brush
+    text_img = Image.new("RGBA", (brush_w, brush_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(text_img)
+
+    # Center text
+    x = (brush_w - text_w) // 2
+    y = (brush_h - text_h) // 2
+    draw.text((x, y), text, font=font, fill="black")
+
+    text_img.save(text_img_path)
 
     # --- 5️⃣ Overlay brush + text on base frame ---
     cmd = (
-        f'ffmpeg -i "{base_thumb}" -i "{brush_path}" -i "{text_img}" '
+        f'ffmpeg -i "{base_thumb}" -i "{brush_path}" -i "{text_img_path}" '
         f'-filter_complex "[1]scale={width}*0.9:-1[brush];'
         f'[0][brush]overlay=(W-w)/2:(H-h)/2[tmp];'
         f'[tmp][2]overlay=(W-w)/2:(H-h)/2" '
@@ -404,10 +428,9 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     await reply.delete(True)
     await reply1.delete(True)
 
-    for f in [thumbnail_wm, base_thumb, text_img]:
+    for f in [thumbnail_wm, base_thumb, text_img_path]:
         if os.path.exists(f):
-            os.remove(f)
-    
+            os.remove(f)    
         
             
         
