@@ -330,10 +330,10 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
 
     # --- 4️⃣ Create text image (transparent bg + black text) ---
     subprocess.run(
-        f'ffmpeg -f lavfi -i color=color=black@0.0:size={width}x{height} '
+        f'ffmpeg -f lavfi -i color=color=black@0.0:size={width}x{height}:d=1,format=rgba '
         f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
         f'fontcolor=black:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2" '
-        f'-t 1 -y "{text_img}"',
+        f'-frames:v 1 -y "{text_img}"',
         shell=True, check=True
     )
 
