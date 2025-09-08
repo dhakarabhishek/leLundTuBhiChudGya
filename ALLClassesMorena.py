@@ -330,7 +330,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     # --- 3️⃣ Determine brush size & proportional font ---
     brush_img = Image.open(brush_path)
     brush_width, brush_height = brush_img.size
-    fontsize = max(int(brush_height * 0.10), 20)  # text = 25% of brush height
+    fontsize = max(int(brush_height * 0.01), 20)  # text = 25% of brush height
 
     # --- 4️⃣ Create text PNG with transparent background ---
     subprocess.run(
