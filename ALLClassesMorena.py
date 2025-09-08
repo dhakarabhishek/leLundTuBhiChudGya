@@ -292,7 +292,6 @@ async def download_and_decrypt_video(url, cmd, name, key):
             print(f"Failed to decrypt {video_path}.")  
             return None
         
-        
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     # --- Font path from root folder ---
     font_path = os.path.join(os.getcwd(), "morena.ttf")
@@ -316,15 +315,15 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     
     width, height = map(int, result.stdout.strip().split("x"))
 
-    # --- 2️⃣ Calculate proportional font size (20% of video height) ---
-    fontsize = max(int(height * 0.2), 20)  # Minimum 20px
+    # --- 2️⃣ Calculate proportional font size (20% of video height, min 20px) ---
+    fontsize = max(int(height * 0.2), 20)
 
-    # --- 3️⃣ Generate thumbnail with centered, proportional watermark + shadow ---
+    # --- 3️⃣ Generate thumbnail with centered watermark + blurred black box ---
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
         f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
         f'fontcolor=white:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2:'
-        f'shadowcolor=black:shadowx=2:shadowy=2" '
+        f'box=1:boxcolor=black@0.5:boxborderw=20" '
         f'-y "{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True, check=True)
@@ -340,13 +339,8 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         f"Generate Thumbnail:\n<blockquote>{name}</blockquote>"
     )
 
-    # --- 5️⃣ Thumbnail selection (safe handling) ---
-    if thumb == "/d":
-        thumbnail_final = thumbnail_wm
-    elif thumb and os.path.exists(thumb):
-        thumbnail_final = thumb
-    else:
-        thumbnail_final = None  # Telegram will auto-generate thumbnail
+    # --- 5️⃣ Thumbnail selection ---
+    thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
 
     # --- 6️⃣ Video duration function ---
     def duration(file_path):
@@ -390,6 +384,8 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
 
     if os.path.exists(thumbnail_wm):
         os.remove(thumbnail_wm)
+        
+
         
     
 
