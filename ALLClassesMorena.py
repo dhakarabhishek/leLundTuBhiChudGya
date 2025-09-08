@@ -293,49 +293,61 @@ async def download_and_decrypt_video(url, cmd, name, key):
             return None
         
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-    import subprocess, os, time
-
-    # --- Font path from root folder ---
+    # --- Paths ---
     font_path = os.path.join(os.getcwd(), "morena.ttf")
+    brush_path = os.path.join(os.getcwd(), "brush.png")
+
     if not os.path.exists(font_path):
         raise FileNotFoundError(f"Font file not found: {font_path}")
-
-    brush_path = os.path.join(os.getcwd(), "brush.png")
     if not os.path.exists(brush_path):
         raise FileNotFoundError(f"Brush PNG not found: {brush_path}")
 
     thumbnail_wm = f"{filename}_thumb.jpg"
+    base_thumb = f"{filename}_base.jpg"
+    text_img = "text.png"
 
     # --- 1️⃣ Get video resolution using ffprobe ---
     ffprobe_cmd = [
-        "ffprobe",
-        "-v", "error",
+        "ffprobe", "-v", "error",
         "-select_streams", "v:0",
         "-show_entries", "stream=width,height",
-        "-of", "csv=p=0:s=x",
-        filename
+        "-of", "csv=p=0:s=x", filename
     ]
     result = subprocess.run(ffprobe_cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe failed: {result.stderr}")
-    
+
     width, height = map(int, result.stdout.strip().split("x"))
 
     # --- 2️⃣ Calculate proportional font size ---
-    fontsize = max(int(height * 0.1), 20)  # 10% of video height
+    fontsize = max(int(height * 0.08), 20)   # 8% of height
 
-    # --- 3️⃣ Generate thumbnail with brush PNG + centered watermark ---
+    # --- 3️⃣ Extract base frame (10s) ---
+    subprocess.run(
+        f'ffmpeg -ss 00:00:10 -i "{filename}" -vframes 1 -y "{base_thumb}"',
+        shell=True, check=True
+    )
+
+    # --- 4️⃣ Create text image (transparent bg + black text) ---
+    subprocess.run(
+        f'ffmpeg -f lavfi -i color=color=black@0.0:size={width}x{height} '
+        f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
+        f'fontcolor=black:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2" '
+        f'-t 1 -y "{text_img}"',
+        shell=True, check=True
+    )
+
+    # --- 5️⃣ Overlay brush (auto-scale) + text on base frame ---
     cmd = (
-        f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
-        f'-i "{brush_path}" -filter_complex "'
-        f'[0:v][1:v] overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2, '
-        f'drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
-        f'fontcolor=black:fontsize={fontsize}:x=(w-text_w)/2:y=(h-text_h)/2'
-        f'" -frames:v 1 -y "{thumbnail_wm}"'
+        f'ffmpeg -i "{base_thumb}" -i "{brush_path}" -i "{text_img}" '
+        f'-filter_complex "[1]scale={width}*0.5:-1[brush];'
+        f'[0][brush]overlay=(W-w)/2:(H-h)/2[tmp];'
+        f'[tmp][2]overlay=(W-w)/2:(H-h)/2" '
+        f'-y "{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True, check=True)
 
-    # --- 4️⃣ Delete progress message ---
+    # --- 6️⃣ Delete progress message ---
     await prog.delete(True)
 
     reply1 = await bot.send_message(
@@ -346,23 +358,22 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         f"Generate Thumbnail:\n<blockquote>{name}</blockquote>"
     )
 
-    # --- 5️⃣ Thumbnail selection ---
+    # --- 7️⃣ Thumbnail selection ---
     thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
 
-    # --- 6️⃣ Video duration function ---
+    # --- 8️⃣ Video duration function ---
     def duration(file_path):
         result = subprocess.run(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
              '-of', 'default=noprint_wrappers=1:nokey=1', file_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
         return float(result.stdout)
-    
+
     dur = int(duration(filename))
     start_time = time.time()
 
-    # --- 7️⃣ Upload video ---
+    # --- 9️⃣ Upload video ---
     try:
         await bot.send_video(
             channel_id,
@@ -385,12 +396,14 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
             progress_args=(reply, start_time),
         )
 
-    # --- 8️⃣ Cleanup ---
+    # --- 🔟 Cleanup ---
     await reply.delete(True)
     await reply1.delete(True)
 
-    if os.path.exists(thumbnail_wm):
-        os.remove(thumbnail_wm)
+    for f in [thumbnail_wm, base_thumb, text_img]:
+        if os.path.exists(f):
+            os.remove(f)
+                                   
         
             
         
