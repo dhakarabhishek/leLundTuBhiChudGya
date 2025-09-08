@@ -323,7 +323,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
         f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
-        f'fontcolor=#00008B:fontsize={fontsize}:x=(w-text_w)/2-20:y=(h-text_h)/2+40" '
+        f'fontcolor=#00008B:fontsize={fontsize}:x=(w-text_w)/2-15:y=(h-text_h)/2+40" '
         f'-y "{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True, check=True)
