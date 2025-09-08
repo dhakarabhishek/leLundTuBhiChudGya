@@ -11,6 +11,7 @@ import requests
 import tgcrypto
 import subprocess
 import concurrent.futures
+from PIL import Image
 from math import ceil
 from utils import progress_bar
 from pyrogram import Client, filters
@@ -292,6 +293,7 @@ async def download_and_decrypt_video(url, cmd, name, key):
             print(f"Failed to decrypt {video_path}.")  
             return None
         
+
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     # --- Paths ---
     font_path = os.path.join(os.getcwd(), "morena.ttf")
@@ -306,7 +308,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     base_thumb = f"{filename}_base.jpg"
     text_img = "text.png"
 
-    # --- 1️⃣ Get video resolution using ffprobe ---
+    # --- 1️⃣ Get video resolution ---
     ffprobe_cmd = [
         "ffprobe", "-v", "error",
         "-select_streams", "v:0",
@@ -319,16 +321,18 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
 
     width, height = map(int, result.stdout.strip().split("x"))
 
-    # --- 2️⃣ Calculate proportional font size ---
-    fontsize = max(int(height * 0.08), 20)   # 8% of height
-
-    # --- 3️⃣ Extract base frame (10s) ---
+    # --- 2️⃣ Extract base frame at 10s ---
     subprocess.run(
         f'ffmpeg -ss 00:00:10 -i "{filename}" -vframes 1 -y "{base_thumb}"',
         shell=True, check=True
     )
 
-    # --- 4️⃣ Create text image (transparent bg + black text) ---
+    # --- 3️⃣ Determine brush size & proportional font ---
+    brush_img = Image.open(brush_path)
+    brush_width, brush_height = brush_img.size
+    fontsize = max(int(brush_height * 0.25), 20)  # text = 25% of brush height
+
+    # --- 4️⃣ Create text PNG with transparent background ---
     subprocess.run(
         f'ffmpeg -f lavfi -i color=color=black@0.0:size={width}x{height}:d=1,format=rgba '
         f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
@@ -337,7 +341,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         shell=True, check=True
     )
 
-    # --- 5️⃣ Overlay brush (auto-scale) + text on base frame ---
+    # --- 5️⃣ Overlay brush + text on base frame ---
     cmd = (
         f'ffmpeg -i "{base_thumb}" -i "{brush_path}" -i "{text_img}" '
         f'-filter_complex "[1]scale={width}*0.5:-1[brush];'
@@ -358,10 +362,10 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         f"Generate Thumbnail:\n<blockquote>{name}</blockquote>"
     )
 
-    # --- 7️⃣ Thumbnail selection ---
+    # --- 7️⃣ Select final thumbnail ---
     thumbnail_final = thumbnail_wm if thumb == "/d" else thumb
 
-    # --- 8️⃣ Video duration function ---
+    # --- 8️⃣ Video duration ---
     def duration(file_path):
         result = subprocess.run(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
@@ -403,7 +407,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     for f in [thumbnail_wm, base_thumb, text_img]:
         if os.path.exists(f):
             os.remove(f)
-                                   
+    
         
             
         
