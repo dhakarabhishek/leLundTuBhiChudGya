@@ -317,13 +317,13 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     width, height = map(int, result.stdout.strip().split("x"))
 
     # --- 2️⃣ Calculate proportional font size (10% of video height) ---
-    fontsize = max(int(height * 0.2), 20)  # Minimum 20px
+    fontsize = max(int(height * 0.3), 20)  # Minimum 20px
 
     # --- 3️⃣ Generate thumbnail with centered, proportional watermark ---
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
         f'-vf "drawtext=text=\'@Final_Piece\':fontfile=\'{font_path}\':'
-        f'fontcolor=#00008B:fontsize={fontsize}:x=(w-text_w)/2-30:y=(h-text_h)/2+15" '
+        f'fontcolor=#00008B:fontsize={fontsize}:x=(w-text_w)/2-40:y=(h-text_h)/2+40" '
         f'-y "{thumbnail_wm}"'
     )
     subprocess.run(cmd, shell=True, check=True)
