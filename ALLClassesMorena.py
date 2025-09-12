@@ -322,7 +322,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     # --- 3️⃣ Generate thumbnail with centered, proportional watermark ---
     cmd = (
         f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 '
-        f'-vf "drawtext=text=\'CRACKWAR\':fontfile=\'{font_path}\':'
+        f'-vf "drawtext=text=\'@astro_sellervip\':fontfile=\'{font_path}\':'
         f'fontcolor=#00008B:fontsize={fontsize}:x=(w-text_w)/2-15:y=(h-text_h)/2+40" '
         f'-y "{thumbnail_wm}"'
     )
